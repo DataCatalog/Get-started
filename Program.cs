@@ -1,10 +1,6 @@
 ﻿//Microsoft Data Catalog team sample
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using System.Net;
 using System.IO;
@@ -16,11 +12,11 @@ namespace ConsoleApplication
         static string clientIDFromAzureAppRegistration = "{ClientID}";
         static AuthenticationResult authResult = null;
 
+        //Note: To find the Catalog name, sign into Azure Data Catalog, and choose User. You will see the Catalog name.
+        static string catalogName = "default";
+
         static void Main(string[] args)
         {
-            //Note: To find the Catalog name, sign into Azure Data Catalog, and choose User. You will see the Catalog name.
-            string catalogName = "default";
-
             RegisterDataAsset(catalogName, SampleJson("OrdersSample"));
             Console.WriteLine("Registered data asset. Press Enter to continue");
             Console.ReadLine();
@@ -44,24 +40,23 @@ namespace ConsoleApplication
             Console.WriteLine("Register sample data asset to Delete. Press Enter to continue");
 
             //Register a sample data asset to delete
-            View view = RegisterDataAsset(catalogName, SampleJson("DeleteSample"));
+            string view = RegisterDataAsset(catalogName, SampleJson("DeleteSample"));
             Console.ReadLine();
 
             Console.WriteLine("Delete data asset. Press Enter to continue");
-            //Sample assumes only one view. In a production app, use more rebost programming
-            DeleteDataAsset(catalogName, view.Name, view.ID);
+            //Sample assumes only one view. In a production app, use more robust programming
+            DeleteDataAsset(catalogName, view);
 
             Console.ReadLine();
         }
 
+        //Get access token:
+        // To call a Data Catalog REST operation, create an instance of AuthenticationContext and call AcquireToken
+        // AuthenticationContext is part of the Active Directory Authentication Library NuGet package
+        // To install the Active Directory Authentication Library NuGet package in Visual Studio, 
+        //  run "Install-Package Microsoft.IdentityModel.Clients.ActiveDirectory" from the NuGet Package Manager Console.
         static AuthenticationResult AccessToken()
         {
-            //Get access token: 
-            // To call a Data Catalog REST operation, create an instance of AuthenticationContext and call AcquireToken
-            // AuthenticationContext is part of the Active Directory Authentication Library NuGet package
-            // To install the Active Directory Authentication Library NuGet package in Visual Studio, 
-            //  run "Install-Package Microsoft.IdentityModel.Clients.ActiveDirectory" from the NuGet Package Manager Console.
-
             if (authResult == null)
             {
                 //Resource Uri for Data Catalog API
@@ -87,28 +82,34 @@ namespace ConsoleApplication
             return authResult;
         }
 
-        static View RegisterDataAsset(string catalogName, string json)
+        //Register data asset:
+        // The Register Data Asset operation registers a new data asset 
+        // or updates an existing one if an asset with the same identity already exists. 
+        static string RegisterDataAsset(string catalogName, string json)
         {
-            View view = null;
+            string dataAssetHeader = string.Empty;
 
+            //Get access token to use to call operation
             AuthenticationResult authResult = AccessToken();
 
             string fullUri = string.Format("https://{0}.datacatalog.azure.com/{1}/views/tables?api-version=2015-07.1.0-Preview",
                 authResult.TenantId, catalogName);
 
+            //Create a POST WebRequest as a Json content type
             HttpWebRequest request = System.Net.WebRequest.Create(fullUri) as System.Net.HttpWebRequest;
             request.KeepAlive = true;
             request.Method = "POST";
             request.ContentLength = 0;
             request.ContentType = "application/json";
 
+            //To authorize the operation call, you need an access token which is part of the Authorization header
             request.Headers.Add("Authorization", authResult.CreateAuthorizationHeader());
 
             //POST web request
             byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(json);
             request.ContentLength = byteArray.Length;
 
-            //Write JSON byte[] into a Stream
+            //Write JSON byte[] into a Stream and get web response
             using (Stream writer = request.GetRequestStream())
             {
                 writer.Write(byteArray, 0, byteArray.Length);
@@ -117,7 +118,9 @@ namespace ConsoleApplication
                 {
                     var response = (HttpWebResponse)request.GetResponse();
 
-                    view = new View(response.Headers["Location"]);
+                    //Get the Response header which contains the data asset ID
+                    //The format is: tables/{data asset ID} 
+                    dataAssetHeader = response.Headers["Location"];
                 }
                 catch(WebException ex)
                 {
@@ -139,16 +142,18 @@ namespace ConsoleApplication
                     }
                     return null;
                 }
-
             }
 
-            return view;
+            return dataAssetHeader;
         }
 
+        //Search data asset:
+        //The Search Data Asset operation searches over data assets based on the search terms provided.
         static string SearchDataAsset(string catalogName, string searchTerm)
         {
             string responseContent = string.Empty;
 
+            //Get access token to use to call operation
             AuthenticationResult authResult = AccessToken();
 
             //NOTE: To find the Catalog Name, sign into Azure Data Catalog, and choose User. You will see a list of Catalog names.          
@@ -156,11 +161,12 @@ namespace ConsoleApplication
                 string.Format("https://{0}.search.datacatalog.azure.com/{1}/search/search?searchTerms={2}&count=10&api-version=2015-06.0.1-Preview",
                 authResult.TenantId, catalogName, searchTerm);
 
+            //Create a GET WebRequest
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(fullUri);
             request.Method = "GET";
 
-            string authHeader = authResult.CreateAuthorizationHeader();
-            request.Headers.Add("Authorization", authHeader);
+            //To authorize the operation call, you need an access token which is part of the Authorization header
+            request.Headers.Add("Authorization", authResult.CreateAuthorizationHeader());
 
             try
             {
@@ -198,22 +204,28 @@ namespace ConsoleApplication
             return responseContent;
         }
 
-        static string DeleteDataAsset(string catalogName, string viewName, string viewItemId)
+        //Delete data asset:
+        // The Delete Data Asset operation deletes a data asset and all annotations (if any) attached to it. 
+        static string DeleteDataAsset(string catalogName, string view)
         {
             string responseStatusCode = string.Empty;
 
+            //Get access token to use to call operation
             AuthenticationResult authResult = AccessToken();
 
             //NOTE: To find the Catalog Name, sign into Azure Data Catalog, and choose User. You will see a list of Catalog names.          
             string fullUri =
-                string.Format("https://{0}.datacatalog.azure.com/{1}/views/{2}/{3}?api-version=2015-07.1.0-Preview",
-                authResult.TenantId, catalogName, viewName, viewItemId);
+                string.Format("https://{0}.datacatalog.azure.com/{1}/views/{2}?api-version=2015-07.1.0-Preview",
+                authResult.TenantId, catalogName, view);
 
+            //Create a DELETE WebRequest as a Json content type
             HttpWebRequest request = System.Net.WebRequest.Create(fullUri) as System.Net.HttpWebRequest;
             request.KeepAlive = true;
             request.Method = "DELETE";
             request.ContentLength = 0;
             request.ContentType = "application/json";
+
+            //To authorize the operation call, you need an access token which is part of the Authorization header
             request.Headers.Add("Authorization", authResult.CreateAuthorizationHeader());
 
             try
@@ -265,7 +277,7 @@ namespace ConsoleApplication
                         "\"server\": \"MyServer.contoso.com\"," +
                         "\"database\": \"Northwind\"," +
                         "\"schema\": \"dbo\"," +
-                        "\"object\": \"OrdersSample\"" +
+                        "\"object\": \"" + name + "\", " +
                     "}" +
                 "}," +
                 "\"modifiedTime\": \"2015-05-15T03:48:39.2425547Z\"," +
@@ -306,16 +318,6 @@ namespace ConsoleApplication
                 "]" +
             "}";
         }
-
     }
-    public class View
-    {
-        public View(string header)
-        {
-            this.Name = header.Split(new char[] { '/' })[0];
-            this.ID = header.Split(new char[] { '/' })[1];
-        }
-        public string ID { get; set; }
-        public string Name { get; set; }
-    }
+    
 }
