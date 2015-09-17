@@ -40,12 +40,12 @@ namespace ConsoleApplication
             Console.WriteLine("Register sample data asset to Delete. Press Enter to continue");
 
             //Register a sample data asset to delete
-            string view = RegisterDataAsset(catalogName, SampleJson("DeleteSample"));
+            string dataAssetID = RegisterDataAsset(catalogName, SampleJson("DeleteSample"));
             Console.ReadLine();
 
             Console.WriteLine("Delete data asset. Press Enter to continue");
-            //Sample assumes only one view. In a production app, use more robust programming
-            DeleteDataAsset(catalogName, view);
+            
+            DeleteDataAsset(catalogName, dataAssetID);
 
             Console.ReadLine();
         }
@@ -206,7 +206,7 @@ namespace ConsoleApplication
 
         //Delete data asset:
         // The Delete Data Asset operation deletes a data asset and all annotations (if any) attached to it. 
-        static string DeleteDataAsset(string catalogName, string view)
+        static string DeleteDataAsset(string catalogName, string dataAssetID)
         {
             string responseStatusCode = string.Empty;
 
@@ -216,7 +216,7 @@ namespace ConsoleApplication
             //NOTE: To find the Catalog Name, sign into Azure Data Catalog, and choose User. You will see a list of Catalog names.          
             string fullUri =
                 string.Format("https://{0}.datacatalog.azure.com/{1}/views/{2}?api-version=2015-07.1.0-Preview",
-                authResult.TenantId, catalogName, view);
+                authResult.TenantId, catalogName, dataAssetID);
 
             //Create a DELETE WebRequest as a Json content type
             HttpWebRequest request = System.Net.WebRequest.Create(fullUri) as System.Net.HttpWebRequest;
