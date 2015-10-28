@@ -12,8 +12,9 @@ namespace ConsoleApplication
         static string clientIDFromAzureAppRegistration = "{ClientID}";
         static AuthenticationResult authResult = null;
 
-        //Note: To find the Catalog name, sign into Azure Data Catalog, and choose User. You will see the Catalog name.
-        static string catalogName = "default";
+	    //Note: This example uses the "DefaultCatalog" keyword to update the user's default catalog.  You may alternately
+        //specify the actual catalog name.
+        static string catalogName = "DefaultCatalog";
 
         static void Main(string[] args)
         {
