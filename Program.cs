@@ -12,7 +12,7 @@ namespace ConsoleApplication
         static string clientIDFromAzureAppRegistration = "{ClientID}";
         static AuthenticationResult authResult = null;
 
-	    //Note: This example uses the "DefaultCatalog" keyword to update the user's default catalog.  You may alternately
+	//Note: This example uses the "DefaultCatalog" keyword to update the user's default catalog.  You may alternately
         //specify the actual catalog name.
         static string catalogName = "DefaultCatalog";
 
