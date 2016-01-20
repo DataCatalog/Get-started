@@ -1,3 +1,1 @@
-Shows you how to Register, Search, and Delete a data asset using the Data Catalog REST API.
-
-
+We moved our repo to [Azure Samples / Data Catalog](https://github.com/Azure-Samples/data-catalog-dotnet-get-started).
